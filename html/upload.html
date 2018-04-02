@@ -6,11 +6,18 @@
         <title>ESP8266 文件上传</title>
     </head>
     <body>
-        <h1 style="margin-bottom: 15px;">ESP8266 文件上传</h1>
-        <form action="upload" method="post" enctype="multipart/form-data">
-            <input type="file" name="fileUpload" />
-            <input type="submit" value="上传" />
-        </form>
-        %s
+        <div style="width: 350px;">
+            <h1 style="margin-bottom: 15px;text-align: center;">ESP8266 文件上传</h1>
+            <div style="text-align: center;">
+                <form action="upload" method="post" enctype="multipart/form-data" style="margin-bottom: 0px;">
+                    <input type="file" name="fileUpload" style="width: 210px;" />
+                    <input type="submit" value="上传" />
+                </form>
+            </div>
+            <div style="text-align: center;">
+                <button type="button" onclick="javascript:location.href='/'" style="height: 60px;margin-top: 20px;">返回控制页面</button>
+            </div>
+        <p style="margin-top: 10px;color: red;text-align: right;"><b>%s</b></p>
+        </div>
     </body>
 </html>

@@ -6,10 +6,15 @@
         <title>ESP8266 灯光控制</title>
     </head>
     <body>
-        <h1 style="margin-bottom: 15px;">ESP8266 灯光控制</h1>
-        <div style="height: 18px;margin-left: 75.5px;"><p>灯光状态：<b>%s</b></p></div>
-        <button type="button" onclick="javascript:location.href='/on'" style="margin-top: 15px;width: 60px;height: 60px;float: left;">ON</button>
-        <button type="button" onclick="javascript:location.href='/off'" style="margin-top: 15px;width: 60px;height: 60px;margin-left: 32px;">OFF</button>
-        <button type="button" onclick="javascript:location.href='/synctime'" style="margin-top: 15px;height: 60px;margin-left: 25px;">校对时间</button>
+        <div style="width: 350px;">
+            <h1 style="margin-bottom: 15px;text-align: center;">ESP8266 灯光控制</h1>
+            <p style="text-align: center;margin-bottom: 10px;">灯光状态：<b>%s</b></p>
+            <div style="text-align: center;">
+                <button type="button" onclick="javascript:location.href='/on'" style="margin-top: 15px;width: 60px;height: 60px;">ON</button>
+                <button type="button" onclick="javascript:location.href='/off'" style="margin-top: 15px;width: 60px;height: 60px;">OFF</button>
+                <button type="button" onclick="javascript:location.href='/synctime'" style="margin-top: 15px;height: 60px;">校对时间</button>
+                <button type="button" onclick="javascript:location.href='/upload'" style="margin-top: 15px;height: 60px;">文件上传</button>
+            </div>
+        </div>
     </body>
 </html>
