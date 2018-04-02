@@ -86,7 +86,7 @@ while True:     #主体
     cl, addr = s.accept()
     #print('client connected from', addr)     #Debug mode
     data = cl.recv(1024)
-    print(data)     #Debug mode
+    #print(data)     #Debug mode
     getlocaltime()
     #print(local_date)     #Debug mode
     if data.find(b'GET / HTTP') != -1:     #主页
@@ -110,7 +110,9 @@ while True:     #主体
         print(datalen)     #Debug mode
         print(boundary)     #Debug mode
         filestatus = False
+        v = 0
         for i in range(1000):
+            v = v + 1
             receives = cl.recv(1024)
             #print(receives)
             if receives.find(b'--' + boundary + b'\r\n') != -1:     #寻找数据结构开头并计算长度
@@ -124,19 +126,21 @@ while True:     #主体
                 filestatus = True
                 print(upload_filename)     #Debug mode
             if filestatus == True and receives.find(b'\r\n\r\n', filename_end) != -1:     #寻找文件数据开头
-                    upload_contect_beg = receives.find(b'\r\n\r\n', filename_end) + 4
-                    upload_contect_1 = bytes.decode(receives[upload_contect_beg:])
-                    datafind = True
-                    print(upload_contect_beg)
-                    #if i != 0:
-                        #writefiledata(upload_filename, 'w', upload_contect_1)
-                        #print(upload_contect_1)     #Debug mode
-                        #f = open(upload_filename, 'w')
-                        #f.write(upload_contect_1)
-                        #f.close()
+                upload_contect_beg = receives.find(b'\r\n\r\n', filename_end) + 4
+                upload_contect_1 = bytes.decode(receives[upload_contect_beg:])
+                datafind = True
+                print(upload_contect_beg)
+                #if i != 0:
+                    #writefiledata(upload_filename, 'w', upload_contect_1)
+                    #print(upload_contect_1)     #Debug mode
+                    #f = open(upload_filename, 'w')
+                    #f.write(upload_contect_1)
+                    #f.close()
+            else:
+                v = v - 1
             if filestatus == True and receives.find(b'\r\n--' + boundary + b'--\r\n') != -1:     #寻找文件数据结尾
                 upload_contect_end = receives.find(b'\r\n--' + boundary + b'--\r\n')
-                if i == 0:
+                if v == 1:
                     upload_contect = bytes.decode(receives[upload_contect_beg:upload_contect_end], 'utf-8')
                     print(upload_contect)     #Debug mode
                     #writefiledata(upload_filename, 'w', upload_contect)
@@ -145,7 +149,7 @@ while True:     #主体
                     #f.close()
                     break
                 else:
-                    upload_contect = bytes.decode(receives[upload_contect_beg:upload_contect_end], 'utf-8')
+                    upload_contect = bytes.decode(receives[:upload_contect_end], 'utf-8')
                     print(upload_contect)     #Debug mode
                     #writefiledata(upload_filename, 'a', upload_contect)
                     #f = open(upload_filename, 'a')
