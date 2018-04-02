@@ -15,9 +15,9 @@ wlan.active(True)
 wlan.connect('K2P','415038973')
 
 p4 = Pin(4, Pin.OUT)
-p5 = Pin(5, Pin.OUT)
-p12 = Pin(12, Pin.OUT)
-p14 = Pin(14, Pin.OUT)
+#p5 = Pin(5, Pin.OUT)     #备用IO口
+#p12 = Pin(12, Pin.OUT)
+#p14 = Pin(14, Pin.OUT)
 header_200 = """HTTP/1.1 200 OK\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: keep-alive\r\nConent-Length: %s\r\n\r\n"""
 header_404 = """HTTP/1.1 404 Not Found\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: close\r\nConent-Length: %s\r\n\r\n"""
 content_type = ["text/html; charset=utf-8", "text/css; charset=utf-8", "application/x-javascript; charset=utf-8", "image/x-icon", "image/jpeg", "image/png"]
@@ -29,11 +29,11 @@ s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 s.setblocking(1)
 s.bind(addr)
 s.listen(10)
-print('listening on', addr)
+print('Listening on', addr)
 
-def ip_status(inp):   #gmt+8:北京时间 gmt：格林时间 (str类型)
+def ip_status(inp):   #判断是否连接了路由器；  gmt+8:北京时间 gmt：格林时间 (str类型)
     ip = wlan.ifconfig()
-    if ip[1] == '255.255.255.0':
+    if ip[1] != '0.0.0.0':
         return get_date.get_date(inp)
     else:
         return 'Unconnected'
@@ -63,49 +63,43 @@ def writefiledata(filename, status, filedata):     #写文件数据
     f.write(filedata)
     f.close()
 
-def readfilesize(filename):
+def readfilesize(filename):     #读文件长度
     f = open(filename, 'r')
     f.seek(0,0)
     f.seek(0,2)
     return f.tell()
     f.close()
 
-while True:
+def readandsend_data(filename, add_str):     #读取文件数据并发送
+    f = open(filename, 'r')
+    for i in range(100):
+        send_data = f.read(536)
+        if len(send_data) == 0:
+            break
+        if send_data.find("%s") != -1:
+            cl.sendall(send_data % (add_str))
+        else:
+            cl.sendall(send_data)
+    f.close()
+
+while True:     #主体
     cl, addr = s.accept()
     #print('client connected from', addr)     #Debug mode
     data = cl.recv(1024)
     print(data)     #Debug mode
     getlocaltime()
     #print(local_date)     #Debug mode
-    if data.find(b'GET / HTTP') != -1:
+    if data.find(b'GET / HTTP') != -1:     #主页
         if p4.value() == 1:
             status = '开启'
         else:
             status = '关闭'
         cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/index.html") + len(status))))
-        f = open("/html/index.html", 'r')
-        for i in range(10):
-            html_index = f.read(536)
-            if len(html_index) == 0:
-                break
-            if html_index.find("%s") != -1:
-                cl.sendall(html_index % (status))
-            else:
-                cl.sendall(html_index)
-        f.close()
-    elif data.find(b'GET /upload ') != -1:
+        readandsend_data("/html/index.html", status)
+    elif data.find(b'GET /upload ') != -1:     #文件上传
         cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html"))))
-        f = open("/html/upload.html", 'r')
-        for i in range(10):
-            html_upload = f.read(536)
-            if len(html_upload) == 0:
-                break
-            if html_upload.find("%s") != -1:
-                cl.sendall(html_upload % (''))
-            else:
-                cl.sendall(html_upload)
-        f.close()
-    elif data.find(b'POST /upload ') != -1:
+        readandsend_data("/html/upload.html", '')
+    elif data.find(b'POST /upload ') != -1:     #文件接收
         datalen_beg = data.find(b'Content-Length: ') + 16
         datalen_end = data.find(b'\r\n', datalen_beg)
         datalen = int(data[datalen_beg:datalen_end])
@@ -116,7 +110,7 @@ while True:
         print(datalen)     #Debug mode
         print(boundary)     #Debug mode
         filestatus = False
-        for i in range(100):
+        for i in range(1000):
             receives = cl.recv(1024)
             #print(receives)
             if receives.find(b'--' + boundary + b'\r\n') != -1:     #寻找数据结构开头并计算长度
@@ -151,7 +145,7 @@ while True:
                     #f.close()
                     break
                 else:
-                    upload_contect = bytes.decode(receives[:upload_contect_end], 'utf-8')
+                    upload_contect = bytes.decode(receives[upload_contect_beg:upload_contect_end], 'utf-8')
                     print(upload_contect)     #Debug mode
                     #writefiledata(upload_filename, 'a', upload_contect)
                     #f = open(upload_filename, 'a')
@@ -160,15 +154,15 @@ while True:
                     break
             elif filestatus == True and datafind == True:
                 residue_len = datalen - formdata_len
-                if residue_len < boundary_len:
+                if residue_len < boundary_len + 8:
                     receives = receives + cl.recv(1024)
                     upload_contect_end = receives.find(b'\r\n--' + boundary + b'--\r\n')
                     upload_contect = bytes.decode(receives[upload_contect_beg:upload_contect_end], 'utf-8')
                     #writefiledata(upload_filename, 'w', upload_contect)
                     print(upload_contect)     #Debug mode
-                    f = open(upload_filename, 'w')
-                    f.write(upload_contect)
-                    f.close()
+                    #f = open(upload_filename, 'w')
+                    #f.write(upload_contect)
+                    #f.close()
                     break
                 if i != 0:
                     print(bytes.decode(receives))
@@ -176,19 +170,10 @@ while True:
                     #f = open(upload_filename, 'a')
                     #f.write(receives)
                     #f.close()
-        upload_status = '<p><b style="color: red;">上传成功！</b></p>'
+        upload_status = "文件上传成功！"
         cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html") + len(upload_status))))
-        f = open("/html/upload.html", 'r')
-        for i in range(10):
-            html_upload = f.read(536)
-            if len(html_upload) == 0:
-                break
-            if html_upload.find("%s") != -1:
-                cl.sendall(html_upload % (upload_status))
-            else:
-                cl.sendall(html_upload)
-        f.close()
-    elif data.find(b'GET /favicon.ico ') != -1:
+        readandsend_data("/html/upload.html", upload_status)
+    elif data.find(b'GET /favicon.ico ') != -1:     #网页图标
         cl.sendall("%s" % (header_200 % (local_date, content_type[3], readfilesize("/html/favicon.ico"))))
         f = open("/html/favicon.ico", 'r')
         for i in range(10):
@@ -197,35 +182,17 @@ while True:
                 break
             cl.sendall(icofile)
         f.close()
-    elif data.find(b'GET /off ') != -1:
+    elif data.find(b'GET /off ') != -1:     #IO口低电平
         p4.value(0)
         cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") + len('已关灯！'))))
-        f = open("/html/status.html", 'r')
-        for i in range(10):
-            html_result = f.read(536)
-            if len(html_result) == 0:
-                break
-            if html_result.find("%s") != -1:
-                cl.sendall(html_result % ('已关灯！'))
-            else:
-                cl.sendall(html_result)
-        f.close()
+        readandsend_data("/html/status.html", '已关灯！')
         print("Controller(turn off):", addr)
-    elif data.find(b'GET /on ') != -1:
+    elif data.find(b'GET /on ') != -1:     #IO口高电平
         p4.value(1)
         cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") + len('已开灯！'))))
-        f = open("/html/status.html", 'r')
-        for i in range(10):
-            html_result = f.read(536)
-            if len(html_result) == 0:
-                break
-            if html_result.find("%s") != -1:
-                cl.sendall(html_result % ('已开灯！'))
-            else:
-                cl.sendall(html_result)
-        f.close()
+        readandsend_data("/html/status.html", '已开灯！')
         print("Controller(turn on):", addr)
-    elif data.find(b'GET /synctime ') != -1:
+    elif data.find(b'GET /synctime ') != -1:     #时间校对
         utc_time = ip_status("gmt")
         if utc_time != 'Unconnected':
             machine.RTC().datetime(utc_time[0:8])
@@ -240,32 +207,14 @@ while True:
                 utc_time[5] = "%s%s" % ("0", utc_time[5])
             if utc_time[6] < 10:
                 utc_time[6] = "%s%s" % ("0", utc_time[6])
-            addtime = "时间已校准！</b><br><br><b>当前北京时间是：%s年%s月%s日 %s:%s:%s" % (str(utc_time[0]), utc_time[1], str(utc_time[2]), utc_time[4], utc_time[5], utc_time[6])
+            addtime = """时间已校准！</b><br><br><b>当前北京时间是：<spen style="color:red;">%s年%s月%s日 %s:%s:%s</spen>""" % (str(utc_time[0]), utc_time[1], str(utc_time[2]), utc_time[4], utc_time[5], utc_time[6])
             cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(addtime)))))
-            f = open("/html/status.html", 'r')
-            for i in range(10):
-                html_result = f.read(536)
-                if len(html_result) == 0:
-                    break
-                if html_result.find("%s") != -1:
-                    cl.sendall(html_result % (addtime))
-                else:
-                    cl.sendall(html_result)
-            f.close()
+            readandsend_data("/html/status.html", addtime)
         else:
             network_status = '时间校准失败，网络未连接！'
             cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(network_status)))))
-            f = open("/html/status.html", 'r')
-            for i in range(10):
-                html_result = f.read(536)
-                if len(html_result) == 0:
-                    break
-                if html_result.find("%s") != -1:
-                    cl.sendall(html_result % (network_status))
-                else:
-                    cl.sendall(html_result)
-            f.close()
-    elif data.find(b'GET /') != -1:
+            readandsend_data("/html/status.html", network_status)
+    elif data.find(b'GET /') != -1:     #404找不到
         print(bytes.decode(data, 'utf-8'))
         len_beg = data.find(bytes("Host: ", 'utf-8')) + 6
         len_end = data.find(bytes("\r\n", 'utf-8'), len_beg)
@@ -273,16 +222,7 @@ while True:
         url_end = data.find(bytes(" HTTP/", 'utf-8'))
         msg_404 = "%s%s" % (bytes.decode(data[len_beg:len_end], 'utf-8'), bytes.decode(data[url_beg:url_end], 'utf-8')) ,t[0], t[1], t[2], t[3], t[4], t[5]
         cl.sendall("%s" % (header_404 % (local_date, content_type[0], readfilesize("/html/404.html") + len(msg_404))))
-        f = open("/html/404.html", 'r')
-            for i in range(10):
-                html_404 = f.read(536)
-                if len(html_404) == 0:
-                    break
-                if html_result.find("%s") != -1:
-                    cl.sendall(html_404 % (msg_404))
-                else:
-                    cl.sendall(html_404)
-            f.close()
+        readandsend_data("/html/404.html", msg_404)
     #print(data)     #Debug mode
     #print(addr,'client disconnected')     #Debug mode
     print('Close', addr)
