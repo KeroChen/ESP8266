@@ -13,6 +13,7 @@ ap_if.config(essid="Light", authmode=network.AUTH_WPA_WPA2_PSK, password="63423l
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 wlan.connect('K2P','415038973')
+machine.freq(160000000)
 
 p4 = Pin(4, Pin.OUT)
 #p5 = Pin(5, Pin.OUT)     #备用IO口
@@ -72,7 +73,7 @@ def readfilesize(filename):     #读文件长度
 
 def readandsend_data(filename, add_str):     #读取文件数据并发送
     f = open(filename, 'r')
-    for i in range(100):
+    while True:
         send_data = f.read(536)
         if len(send_data) == 0:
             break
@@ -110,6 +111,7 @@ while True:     #主体
         print(datalen)     #Debug mode
         print(boundary)     #Debug mode
         filestatus = False
+        datafound = False
         v = 0
         for i in range(1000):
             v = v + 1
@@ -117,8 +119,9 @@ while True:     #主体
             #print(receives)
             if receives.find(b'--' + boundary + b'\r\n') != -1:     #寻找数据结构开头并计算长度
                 receives_beg = receives.find(b'--' + boundary + b'\r\n')
-                formdata_len = len(receives[receives_beg:])
-                print(formdata_len)     #Debug mode
+                #formdata_len = len(receives[receives_beg:])
+                package_len = len(receives)
+                print(package_len)     #Debug mode
             if receives.find(b'filename="') != -1:     #寻找文件名
                 filename_beg = receives.find(b'filename="', receives_beg) + 10
                 filename_end = receives.find(b'"\r\n', filename_beg)
@@ -128,15 +131,15 @@ while True:     #主体
             if filestatus == True and receives.find(b'\r\n\r\n', filename_end) != -1:     #寻找文件数据开头
                 upload_contect_beg = receives.find(b'\r\n\r\n', filename_end) + 4
                 upload_contect_1 = bytes.decode(receives[upload_contect_beg:])
-                datafind = True
-                print(upload_contect_beg)
+                datafound = True
+                #print(upload_contect_beg)
                 #if i != 0:
                     #writefiledata(upload_filename, 'w', upload_contect_1)
                     #print(upload_contect_1)     #Debug mode
                     #f = open(upload_filename, 'w')
                     #f.write(upload_contect_1)
                     #f.close()
-            else:
+            elif datafound != True:
                 v = v - 1
             if filestatus == True and receives.find(b'\r\n--' + boundary + b'--\r\n') != -1:     #寻找文件数据结尾
                 upload_contect_end = receives.find(b'\r\n--' + boundary + b'--\r\n')
@@ -148,7 +151,7 @@ while True:     #主体
                     #f.write(upload_contect)
                     #f.close()
                     break
-                else:
+                elif v > 1:
                     upload_contect = bytes.decode(receives[:upload_contect_end], 'utf-8')
                     print(upload_contect)     #Debug mode
                     #writefiledata(upload_filename, 'a', upload_contect)
@@ -156,24 +159,29 @@ while True:     #主体
                     #f.write(upload_contect)
                     #f.close()
                     break
-            elif filestatus == True and datafind == True:
-                residue_len = datalen - formdata_len
-                if residue_len < boundary_len + 8:
+            elif filestatus == True and datafound == True:
+                residue_len = datalen % package_len
+                receives_times = datalen // package_len
+                print(residue_len)
+                print(v)
+                if residue_len != 0 and receives_times == v:
                     receives = receives + cl.recv(1024)
                     upload_contect_end = receives.find(b'\r\n--' + boundary + b'--\r\n')
-                    upload_contect = bytes.decode(receives[upload_contect_beg:upload_contect_end], 'utf-8')
+                    upload_contect = bytes.decode(receives[:upload_contect_end], 'utf-8')
                     #writefiledata(upload_filename, 'w', upload_contect)
                     print(upload_contect)     #Debug mode
                     #f = open(upload_filename, 'w')
                     #f.write(upload_contect)
                     #f.close()
                     break
-                if i != 0:
-                    print(bytes.decode(receives))
+                if v == 1:
+                    print(bytes.decode(receives[upload_contect_beg:]))
                     #writefiledata(upload_filename, 'a', bytes.decode(receives))
                     #f = open(upload_filename, 'a')
                     #f.write(receives)
                     #f.close()
+                elif v > 1:
+                    print(bytes.decode(receives))
         upload_status = "文件上传成功！"
         cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html") + len(upload_status))))
         readandsend_data("/html/upload.html", upload_status)
@@ -203,6 +211,8 @@ while True:     #主体
             #print(time.localtime())     #Debug mode
             if utc_time[1] < 10:
                 utc_time[1] = "%s%s" % ("0", utc_time[1])
+            if utc_time[2] < 10:
+                utc_time[2] = "%s%s" % ("0", utc_time[2])
             if (utc_time[4] + 8) < 10:
                 utc_time[4] = "%s%s" % ("0", utc_time[4] + 8)
             else:
@@ -211,7 +221,7 @@ while True:     #主体
                 utc_time[5] = "%s%s" % ("0", utc_time[5])
             if utc_time[6] < 10:
                 utc_time[6] = "%s%s" % ("0", utc_time[6])
-            addtime = """时间已校准！</b><br><br><b>当前北京时间是：<spen style="color:red;">%s年%s月%s日 %s:%s:%s</spen>""" % (str(utc_time[0]), utc_time[1], str(utc_time[2]), utc_time[4], utc_time[5], utc_time[6])
+            addtime = """时间已校准！</b><br><br><b>当前北京时间是：<spen style="color:red;">%s年%s月%s日 %s:%s:%s</spen>""" % (str(utc_time[0]), utc_time[1], utc_time[2], utc_time[4], utc_time[5], utc_time[6])
             cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(addtime)))))
             readandsend_data("/html/status.html", addtime)
         else:
