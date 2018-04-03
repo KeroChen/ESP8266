@@ -108,20 +108,19 @@ while True:     #主体
         boundary_end = data.find(b'\r\n', boundary_beg)
         boundary = data[boundary_beg:boundary_end]
         boundary_len = len(boundary)
-        print(datalen)     #Debug mode
-        print(boundary)     #Debug mode
+        #print(datalen)     #Debug mode
+        #print(boundary)     #Debug mode
         filestatus = False
         datafound = False
         v = 0
-        for i in range(1000):
+        while True:
             v = v + 1
             receives = cl.recv(1024)
-            #print(receives)
+            #print(receives)     #Debug mode
             if receives.find(b'--' + boundary + b'\r\n') != -1:     #寻找数据结构开头并计算长度
                 receives_beg = receives.find(b'--' + boundary + b'\r\n')
-                #formdata_len = len(receives[receives_beg:])
                 package_len = len(receives)
-                print(package_len)     #Debug mode
+                #print(package_len)     #Debug mode
             if receives.find(b'filename="') != -1:     #寻找文件名
                 filename_beg = receives.find(b'filename="', receives_beg) + 10
                 filename_end = receives.find(b'"\r\n', filename_beg)
@@ -130,64 +129,45 @@ while True:     #主体
                 print(upload_filename)     #Debug mode
             if filestatus == True and receives.find(b'\r\n\r\n', filename_end) != -1:     #寻找文件数据开头
                 upload_contect_beg = receives.find(b'\r\n\r\n', filename_end) + 4
-                upload_contect_1 = bytes.decode(receives[upload_contect_beg:])
                 datafound = True
-                #print(upload_contect_beg)
-                #if i != 0:
-                    #writefiledata(upload_filename, 'w', upload_contect_1)
-                    #print(upload_contect_1)     #Debug mode
-                    #f = open(upload_filename, 'w')
-                    #f.write(upload_contect_1)
-                    #f.close()
             elif datafound != True:
                 v = v - 1
             if filestatus == True and receives.find(b'\r\n--' + boundary + b'--\r\n') != -1:     #寻找文件数据结尾
                 upload_contect_end = receives.find(b'\r\n--' + boundary + b'--\r\n')
                 if v == 1:
                     upload_contect = bytes.decode(receives[upload_contect_beg:upload_contect_end], 'utf-8')
-                    print(upload_contect)     #Debug mode
-                    #writefiledata(upload_filename, 'w', upload_contect)
-                    #f = open(upload_filename, 'w')
-                    #f.write(upload_contect)
-                    #f.close()
+                    #print(upload_contect)     #Debug mode
+                    writefiledata(upload_filename, 'w', upload_contect)
                     break
                 elif v > 1:
                     upload_contect = bytes.decode(receives[:upload_contect_end], 'utf-8')
-                    print(upload_contect)     #Debug mode
-                    #writefiledata(upload_filename, 'a', upload_contect)
-                    #f = open(upload_filename, 'a')
-                    #f.write(upload_contect)
-                    #f.close()
+                    #print(upload_contect)     #Debug mode
+                    writefiledata(upload_filename, 'a', upload_contect)
                     break
             elif filestatus == True and datafound == True:
                 residue_len = datalen % package_len
                 receives_times = datalen // package_len
-                print(residue_len)
-                print(v)
+                #print(residue_len)     #Debug mode
+                #print(v)     #Debug mode
                 if residue_len != 0 and receives_times == v:
                     receives = receives + cl.recv(1024)
                     upload_contect_end = receives.find(b'\r\n--' + boundary + b'--\r\n')
                     upload_contect = bytes.decode(receives[:upload_contect_end], 'utf-8')
-                    #writefiledata(upload_filename, 'w', upload_contect)
-                    print(upload_contect)     #Debug mode
-                    #f = open(upload_filename, 'w')
-                    #f.write(upload_contect)
-                    #f.close()
+                    writefiledata(upload_filename, 'ab', upload_contect)
+                    #print(receives[:upload_contect_end])     #Debug mode
                     break
                 if v == 1:
-                    print(bytes.decode(receives[upload_contect_beg:]))
-                    #writefiledata(upload_filename, 'a', bytes.decode(receives))
-                    #f = open(upload_filename, 'a')
-                    #f.write(receives)
-                    #f.close()
+                    #print(receives[upload_contect_beg:])     #Debug mode
+                    writefiledata(upload_filename, 'wb', bytes.decode(receives[upload_contect_beg:]))
                 elif v > 1:
-                    print(bytes.decode(receives))
+                    #print(bytes.decode(receives))     #Debug mode
+                    writefiledata(upload_filename, 'ab', bytes.decode(receives))
         upload_status = "文件上传成功！"
         cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html") + len(upload_status))))
         readandsend_data("/html/upload.html", upload_status)
     elif data.find(b'GET /favicon.ico ') != -1:     #网页图标
         cl.sendall("%s" % (header_200 % (local_date, content_type[3], readfilesize("/html/favicon.ico"))))
-        f = open("/html/favicon.ico", 'r')
+        f = open("/html/favicon.ico", 'rb')
         for i in range(10):
             icofile = f.read(536)
             if len(icofile) == 0:
@@ -198,12 +178,12 @@ while True:     #主体
         p4.value(0)
         cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") + len('已关灯！'))))
         readandsend_data("/html/status.html", '已关灯！')
-        print("Controller(turn off):", addr)
+        print("Controller(turn off):", addr)     #Debug mode
     elif data.find(b'GET /on ') != -1:     #IO口高电平
         p4.value(1)
         cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") + len('已开灯！'))))
         readandsend_data("/html/status.html", '已开灯！')
-        print("Controller(turn on):", addr)
+        print("Controller(turn on):", addr)     #Debug mode
     elif data.find(b'GET /synctime ') != -1:     #时间校对
         utc_time = ip_status("gmt")
         if utc_time != 'Unconnected':
@@ -239,5 +219,5 @@ while True:     #主体
         readandsend_data("/html/404.html", msg_404)
     #print(data)     #Debug mode
     #print(addr,'client disconnected')     #Debug mode
-    print('Close', addr)
+    print('Close', addr)     #Debug mode
     cl.close()
