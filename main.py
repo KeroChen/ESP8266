@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*- 
 import network
+import ntptime
 import sys
 import socket
 import time
 import machine
-import get_date
 from machine import Pin
-from get_date import month_data, week_data
 
 ap_if = network.WLAN(network.AP_IF)
 ap_if.config(essid="Light", authmode=network.AUTH_WPA_WPA2_PSK, password="63423light")
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 wlan.connect('K2P','415038973')
-machine.freq(160000000)
+machine.freq(160000000)     #超频至160MHz，性能上暂时看不出有何提升
 
 p4 = Pin(4, Pin.OUT)
 #p5 = Pin(5, Pin.OUT)     #备用IO口
@@ -22,6 +21,7 @@ p4 = Pin(4, Pin.OUT)
 header_200 = """HTTP/1.1 200 OK\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: keep-alive\r\nConent-Length: %s\r\n\r\n"""
 header_404 = """HTTP/1.1 404 Not Found\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: close\r\nConent-Length: %s\r\n\r\n"""
 content_type = ["text/html; charset=utf-8", "text/css; charset=utf-8", "application/x-javascript; charset=utf-8", "image/x-icon", "image/jpeg", "image/png"]
+ntptime.host = 'cn.ntp.org.cn'
 
 host = '0.0.0.0'
 port = 80
@@ -32,14 +32,19 @@ s.bind(addr)
 s.listen(10)
 print('Listening on', addr)
 
-def ip_status(inp):   #判断是否连接了路由器；  gmt+8:北京时间 gmt：格林时间 (str类型)
+def ip_status():   #判断是否连接了路由器
     ip = wlan.ifconfig()
     if ip[1] != '0.0.0.0':
-        return get_date.get_date(inp)
+        try:
+            return time.localtime(ntptime.time())
+        except OSError:
+            return '校对操作过快，请稍后再试！'
     else:
         return 'Unconnected'
 
 def getlocaltime():
+    month_data = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
+    week_data = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     global t
     t = list(time.localtime())
     for m in [1,2,3,4,5,6,7,8,9,10,11,12]:
@@ -78,13 +83,22 @@ def readandsend_data(filename, add_str):     #读取文件数据并发送
         if len(send_data) == 0:
             break
         if send_data.find("%s") != -1:
-            cl.sendall(send_data % (add_str))
+            try:
+                cl.sendall(send_data % (add_str))
+            except:
+                return 0
         else:
-            cl.sendall(send_data)
+            try:
+                cl.sendall(send_data)
+            except:
+                return 0
     f.close()
 
 while True:     #主体
-    cl, addr = s.accept()
+    try:
+        cl, addr = s.accept()
+    except OSError:
+        print("OSError: line 92")
     #print('client connected from', addr)     #Debug mode
     data = cl.recv(1024)
     #print(data)     #Debug mode
@@ -185,10 +199,11 @@ while True:     #主体
         readandsend_data("/html/status.html", '已开灯！')
         print("Controller(turn on):", addr)     #Debug mode
     elif data.find(b'GET /synctime ') != -1:     #时间校对
-        utc_time = ip_status("gmt")
-        if utc_time != 'Unconnected':
-            machine.RTC().datetime(utc_time[0:8])
-            #print(time.localtime())     #Debug mode
+        utc_time = ip_status()
+        if utc_time != 'Unconnected' and utc_time != '校对操作过快，请稍后再试！':
+            utc_time = list(utc_time[0:3] + (0,) + utc_time[3:6] + (0,))
+            #print(utc_time)     #Debug mode
+            machine.RTC().datetime(utc_time)
             if utc_time[1] < 10:
                 utc_time[1] = "%s%s" % ("0", utc_time[1])
             if utc_time[2] < 10:
@@ -204,6 +219,10 @@ while True:     #主体
             addtime = """时间已校准！</b><br><br><b>当前北京时间是：<spen style="color:red;">%s年%s月%s日 %s:%s:%s</spen>""" % (str(utc_time[0]), utc_time[1], utc_time[2], utc_time[4], utc_time[5], utc_time[6])
             cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(addtime)))))
             readandsend_data("/html/status.html", addtime)
+        elif utc_time == '校对操作过快，请稍后再试！':
+            errno110_msg = utc_time + "</b>"
+            cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(errno110_msg)))))
+            readandsend_data("/html/status.html", errno110_msg)
         else:
             network_status = '时间校准失败，网络未连接！'
             cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(network_status)))))
