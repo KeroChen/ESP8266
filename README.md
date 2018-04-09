@@ -9,3 +9,7 @@
 - 控制GPIO口高低电平
 - 校对模块RTC时钟
 - 上传文件
+
+注意：过大的python代码直接运行会发生内存请求失败错误，解决办法是预先编译为二进制文件。
+
+编译工具：[mpy-cross](https://github.com/micropython/micropython/tree/master/mpy-cross)
