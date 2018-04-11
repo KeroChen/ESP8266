@@ -33,7 +33,6 @@ s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 s.setblocking(1)
 s.bind(addr)
 s.listen(10)
-print('Listening on', addr)
 
 def ip_status():   #判断是否连接了路由器
     ip = wlan.ifconfig()
@@ -101,12 +100,21 @@ def readandsend_data(filename, add_str):     #读取文件数据并发送
     f.close()
 
 def main():     #主体
+    global cl, ban, addr
+    time.sleep(2)
+    utc_time = ip_status()
+    if utc_time != 'Unconnected' and utc_time != '校对操作过快，请稍后再试！':
+        utc_time = list(utc_time[0:3] + (0,) + utc_time[3:6] + (0,))
+        machine.RTC().datetime(utc_time)
+        print("GMT date: %s/%s/%s %s:%s:%s" % (utc_time[0], utc_time[1], utc_time[2], utc_time[4], utc_time[5], utc_time[6]))
+    else:
+        print('Network error')
+    print('Listening on', addr)
     while True:
-        global cl, ban
         try:
             cl, addr = s.accept()
         except OSError:
-            print("OSError: line 101")
+            print("OSError: accept")
         #print('client connected from', addr)     #Debug mode
         data = cl.recv(1024)
         #print(data)     #Debug mode
@@ -131,6 +139,7 @@ def main():     #主体
                 #print(auth)     #Debug mode
                 #print('ban=', ban)     #Debug mode
                 if auth == 'admin:123456':
+                    cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html"))))
                     readandsend_data("/html/upload.html", '')
                 elif ban != 5:
                     ban = ban + 1
@@ -241,7 +250,7 @@ def main():     #主体
                     utc_time[5] = "%s%s" % ("0", utc_time[5])
                 if utc_time[6] < 10:
                     utc_time[6] = "%s%s" % ("0", utc_time[6])
-                addtime = """时间已校准！</b><br><br><b>当前北京时间是：<spen style="color:red;">%s年%s月%s日 %s:%s:%s</spen>""" % (str(utc_time[0]), utc_time[1], utc_time[2], utc_time[4], utc_time[5], utc_time[6])
+                addtime = """时间已校准！<br>当前北京时间是：<spen style="color:red;font-size: 15px;">%s年%s月%s日 %s:%s:%s</spen>""" % (str(utc_time[0]), utc_time[1], utc_time[2], utc_time[4], utc_time[5], utc_time[6])
                 cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(addtime)))))
                 readandsend_data("/html/status.html", addtime)
             elif utc_time == '校对操作过快，请稍后再试！':
@@ -265,6 +274,6 @@ def main():     #主体
         #print(addr,'client disconnected')     #Debug mode
         print('Close', addr)     #Debug mode
         cl.close()
-    
+
 if __name__ == "__main__":
     main()
