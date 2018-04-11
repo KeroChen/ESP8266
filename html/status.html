@@ -1,18 +1,66 @@
-<!DOCTYPE html PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html>
+<!DOCTYPE html>
+<html lang="zh-cn">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>ESP8266 灯光控制</title>
+        <style>
+        body {
+            font-family: miranafont,"Hiragino Sans GB",STXihei,"Microsoft YaHei",SimSun,sans-serif;
+            margin: auto;
+            margin-top: 3px;
+        }
+
+        .main {
+            width: 350px;
+            border-bottom: 2px dashed #3F51B5;
+            border-top: 2px dashed #FFEB3B;
+            border-left: 2px dashed #00BCD4;
+            border-right: 2px dashed #F44336;
+            margin: auto;
+        }
+
+        h1 {
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        p {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .func_button button {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            height: 60px;
+            border: 1px solid #4CAF50;
+            background: #FFFFFF;
+            color: #6F6F6F;
+            font-family: microsoft yahei;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .func_button {
+            text-align: center;
+        }
+
+        button:hover {
+            color: #444;
+            background: #eee;
+            border-color: #ccc;
+            transition: background-color 0.3s ease-in-out
+        }
+        </style>
     </head>
     <body>
-        <div style="width: 350px;">
-            <h1 style="margin-bottom: 15px;text-align: center;">ESP8266 灯光控制</h1>
-            <div style="text-align: center;">
-                <b>%s</b>
-            </div>
-            <div style="text-align: center;">
-                <button type="button" onclick="javascript:location.href='/'" style="margin-top: 15px;margin-bottom: 15px;height: 60px;">返回控制页面</button>
+        <div class="main">
+            <h1>ESP8266 灯光控制</h1>
+            <p>%s</p>
+            <div class="func_button">
+                <button type="button" onclick="javascript:location.href='/'">返回控制页面</button>
             </div>
         </div>
     </body>
