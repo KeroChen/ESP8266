@@ -45,22 +45,69 @@
 
         .func_button {
             text-align: center;
-            margin-bottom: 24px
+            margin-bottom: 20px
         }
 
         button:hover {
             color: #444;
             background: #eee;
-            border-color: #ccc
+            border-color: #ccc;
+            text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.3)
         }
         
         button {
-        -moz-transition: background-color 0.3s ease-in;
-        -webkit-transition: background-color 0.3s ease-in;
-        -o-transition: background-color 0.3s ease-in;
-        transition: background-color 0.3s ease-in
+            -moz-transition: background-color 0.3s ease-in;
+            -webkit-transition: background-color 0.3s ease-in;
+            -o-transition: background-color 0.3s ease-in;
+            transition: background-color 0.3s ease-in
+        }
+        
+        .foo-logo {
+            width: 30px;
+            height: 30px;
+            opacity: .3;
+            margin: 0 auto;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-image: url(https://www.flasky.cn/wp-content/themes/Siren/images/f-logo.png);
+            animation: poi-deg 12s infinite linear;
+            -webkit-animation: poi-deg 12s infinite linear
+        }
+        
+        .foo-text {
+            text-align: center;
+            font-size: 12px;
+            color: #B9B9B9;
+            text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.1)
+        }
+        
+        /*360度旋转*/
+        @keyframes poi-deg {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+
+        @-webkit-keyframes poi-deg {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
         }
         </style>
+        <script language="JavaScript" type="text/javascript">
+            if (!!window.ActiveXObject || "ActiveXObject" in window || navigator.appName == "Microsoft Internet Explorer" || navigator.userAgent.indexOf("Edge") > -1) { //is IE?
+                alert('请抛弃万恶的IE系列浏览器吧。');
+            }
+        </script>
     </head>
     <body>
         <div class="main">
@@ -72,6 +119,8 @@
                 <button type="button" onclick="javascript:location.href='/synctime'">校对时间</button>
                 <button type="button" onclick="javascript:location.href='/upload'">文件上传</button>
             </div>
+            <p class="foo-logo"></p>
+            <p class="foo-text">© 2018 KeroChen | Powered by MicroPython</p>
         </div>
     </body>
 </html>

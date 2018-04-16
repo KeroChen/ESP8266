@@ -80,6 +80,7 @@
 
         /*a  upload */
         .a-upload {
+            width: 150px;
             padding: 4px 10px;
             height: 23px;
             line-height: 20px;
@@ -113,6 +114,47 @@
             background: #eee;
             border-color: #ccc;
         }
+
+        .foo-logo {
+            width: 30px;
+            height: 30px;
+            opacity: .3;
+            margin: 0 auto;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-image: url(https://www.flasky.cn/wp-content/themes/Siren/images/f-logo.png);
+            animation: poi-deg 12s infinite linear;
+            -webkit-animation: poi-deg 12s infinite linear
+        }
+        
+        .foo-text {
+            text-align: center;
+            font-size: 12px;
+            color: #B9B9B9;
+            text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.1)
+        }
+        
+        /*360度旋转*/
+        @keyframes poi-deg {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+
+        @-webkit-keyframes poi-deg {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
         </style>
         <script language="JavaScript" type="text/javascript">
             function check(){
@@ -134,7 +176,7 @@
             <h1>ESP8266 文件上传</h1>
             <div style="text-align: center;">
                 <form action="upload" method="post" name="upload" enctype="multipart/form-data" onsubmit="return check()" class="upload_form">
-                    <a href="javascript:;" class="a-upload" id="a_name" style="" onclick="">
+                    <a href="javascript:;" class="a-upload" id="a_name">
                         <input type="file" name="fileupload" id="a_file" onmouseout="name_change()"><span id="a_text">点击这里上传文件</span>
                     </a>
                     <input type="submit" value="上传" class="submit_input" id="submit_input">
@@ -144,23 +186,17 @@
                 <button type="button" onclick="javascript:location.href='/'">返回控制页面</button>
             </div>
             <p>%s</p>
+            <p class="foo-logo"></p>
+            <p class="foo-text">© 2018 KeroChen | Powered by MicroPython</p>
         </div>
         <script language="JavaScript" type="text/javascript">
-            if(navigator.appName == "Microsoft Internet Explorer"){
+            if(!!window.ActiveXObject || "ActiveXObject" in window || navigator.appName == "Microsoft Internet Explorer" || navigator.userAgent.indexOf("Edge") > -1){
                 document.getElementById("a_name").innerHTML = "不允许该浏览器使用上传功能！";
                 document.getElementById("a_name").style.cursor = "not-allowed";
                 document.getElementById("a_name").onclick = "return false;";
                 document.getElementById("a_name").href = "javascript:void(0);";
                 document.getElementById("submit_input").style.cursor = "not-allowed";
                 document.getElementById("submit_input").disabled = "disabled";
-            }
-            if(navigator.userAgent.indexOf("Edge") > -1){
-                document.getElementById("a_name").innerHTML = "不允许该浏览器使用上传功能！";
-                document.getElementById("a_name").style.cursor = "not-allowed";
-                document.getElementById("a_name").onclick = "return false;";
-                document.getElementById("a_name").href = "javascript:void(0);";
-                document.getElementById("submit_input").disabled = "disabled";
-                document.getElementById("submit_input").style.cursor = "not-allowed";
             }
         </script>
     </body>
