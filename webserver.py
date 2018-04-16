@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*- 
 import network
 import ntptime
+import uos
 import sys
 import socket
 import time
 import machine
 import ubinascii
+#import urequests
 from machine import Pin
 
 ap_if = network.WLAN(network.AP_IF)
@@ -24,7 +26,6 @@ header_401 = """HTTP/1.1 401 Unauthorized\r\n%s\r\nServer: K-httpd\r\nWWW-Authen
 header_404 = """HTTP/1.1 404 Not Found\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: close\r\nConent-Length: %s\r\n\r\n"""
 content_type = ["text/html; charset=utf-8", "text/css; charset=utf-8", "application/x-javascript; charset=utf-8", "image/x-icon", "image/jpeg", "image/png"]
 ntptime.host = 'cn.ntp.org.cn'
-ban = 1
 
 host = '0.0.0.0'
 port = 80
@@ -67,12 +68,16 @@ def getlocaltime():
     local_date = "Date: %s, %s %s %s %s:%s:%s GMT" % (week, t[2], month, t[0], t[3], t[4], t[5])
 
 def writefiledata(filename, status, filedata):     #写文件数据
+    global error_file
+    error_file = False
     try:
         f = open(filename, status)
     except:
         print('Write failed on file')
-    f.write(filedata)
-    f.close()
+        error_file = True
+    else:
+        f.write(filedata)
+        f.close()
 
 def readfilesize(filename):     #读文件长度
     f = open(filename, 'r')
@@ -91,16 +96,22 @@ def readandsend_data(filename, add_str):     #读取文件数据并发送
             try:
                 cl.sendall(send_data % (add_str))
             except:
-                print('Error in line 87')
+                print("Send have '%s' data error")
         else:
             try:
                 cl.sendall(send_data)
             except:
-                print('Error in line 92')
+                print('Send data error')
     f.close()
 
+#def bingimages():     #bing壁纸
+#    req =  urequests.get('https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1')
+#    json_str = str(req.json()['images'])
+#    url = 'https://cn.bing.com' + json_str[json_str.find("\'url\': \'") + 8:json_str.find("\'",json_str.find("\'url\': \'") + 8)]
+
 def main():     #主体
-    global cl, ban, addr
+    ban = 1
+    global cl, addr
     time.sleep(2)
     utc_time = ip_status()
     if utc_time != 'Unconnected' and utc_time != '校对操作过快，请稍后再试！':
@@ -149,7 +160,7 @@ def main():     #主体
                     #ban_ip_end = data.find(bytes("\r\n", 'utf-8'), ban_ip_beg)
                     #ban_ip = bytes.decode(data[ban_ip_beg:ban_ip_end], 'utf-8')      #Ban IP
                     cl.sendall("%s" % (header_404 % (local_date, content_type[0], '0')))
-        elif data.find(b'POST /upload ') != -1:     #文件POST提交
+        elif data.find(b'POST /upload ') != -1:     #文件POST提交，注：不支持IE、Edge浏览器，提交的文件名太过奇葩
             datalen_beg = data.find(b'Content-Length: ') + 16
             datalen_end = data.find(b'\r\n', datalen_beg)
             datalen = int(data[datalen_beg:datalen_end])
@@ -210,7 +221,10 @@ def main():     #主体
                     elif v > 1:
                         #print(bytes.decode(receives))     #Debug mode
                         writefiledata(upload_filename, 'ab', receives)
-            upload_status = "文件上传成功！"
+            if error_file == True:
+                upload_status = "文件上传失败！请检查文件路径。"
+            else:
+                upload_status = "文件上传成功！"
             cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html") + len(upload_status))))
             readandsend_data("/html/upload.html", upload_status)
         elif data.find(b'GET /favicon.ico ') != -1:     #网页图标
