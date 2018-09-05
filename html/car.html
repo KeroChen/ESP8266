@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script type="text/javascript" src="js/jquery.min.js"></script>
+        <title>ESP8266 灯光控制</title>
+        <style>
+        body {
+            font-family: miranafont,"Hiragino Sans GB",STXihei,"Microsoft YaHei",SimSun,sans-serif;
+            margin: auto;
+            margin-top: 3px;
+        }
+
+        .main {
+            width: 350px;
+            border-bottom: 2px dashed #3F51B5;
+            border-top: 2px dashed #FFEB3B;
+            border-left: 2px dashed #00BCD4;
+            border-right: 2px dashed #F44336;
+            margin: auto;
+        }
+
+        h1 {
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        p {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        input {
+            width: 200px;
+            height: 30px;
+        }
+
+        .func_button button {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            height: 60px;
+            border: 1px solid #4CAF50;
+            background: #FFFFFF;
+            color: #6F6F6F;
+            font-family: microsoft yahei;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .func_button {
+            text-align: center;
+        }
+
+        button:hover {
+            color: #444;
+            background: #eee;
+            border-color: #ccc;
+            transition: background-color 0.3s ease-in-out
+        }
+
+        .foo-logo {
+            width: 30px;
+            height: 30px;
+            opacity: .3;
+            margin: 0 auto;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-image: url(https://www.flasky.cn/wp-content/themes/Siren/images/f-logo.png);
+            animation: poi-deg 12s infinite linear;
+            -webkit-animation: poi-deg 12s infinite linear
+        }
+        
+        .foo-text {
+            text-align: center;
+            font-size: 12px;
+            color: #B9B9B9;
+            text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.1)
+        }
+        
+        /*360度旋转*/
+        @keyframes poi-deg {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+
+        @-webkit-keyframes poi-deg {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+        </style>
+        <script>
+            function change_turn(){
+                var range=document.getElementById("range_turn");
+                var show=document.getElementById("show_turn");
+                show.innerHTML=range.value-16;
+                $.ajax({
+                type: 'GET',
+                url:"/control&turn-value="+range.value,
+                async:false
+                });
+            }
+            function change_go(){
+                var range=document.getElementById("range_go");
+                var show=document.getElementById("show_go");
+                show.innerHTML=range.value;
+            $.ajax({
+                type: 'GET',
+                url:"/control&go-value="+range.value,
+                async:false
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <div class="main">
+            <h1>ESP8266 小车控制</h1>
+            <div class="func_button">
+                <p>转向：</p>
+                <input id="range_turn" type="range" min="0" max="32" value="16" oninput="change_turn()"><span id="show_turn">0</span>
+                <div></div>
+                <p>油门：</p>
+                <input id="range_go" type="range" min="0" max="51" value="0" oninput="change_go()"><span id="show_go">0</span>
+                <div style="height: 30px;"></div>
+                <button type="button" onclick="javascript:location.href='/'">返回主页</button>
+            </div>
+            <p class="foo-logo"></p>
+            <p class="foo-text">© 2018 KeroChen | Powered by MicroPython</p>
+        </div>
+    </body>
+</html>

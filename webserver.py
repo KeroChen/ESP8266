@@ -9,18 +9,30 @@ import machine
 import ubinascii
 #import urequests
 from machine import Pin
+from machine import PWM
 
 ap_if = network.WLAN(network.AP_IF)
 ap_if.config(essid="Light", authmode=network.AUTH_WPA_WPA2_PSK, password="63423light")
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 wlan.connect('K2P','415038973')
-machine.freq(160000000)     #超频至160MHz，性能上暂时看不出有何提升
+machine.freq(160000000)     #超频至160MHz
 
+#p2 = Pin(2, Pin.OUT)    #板载LED
+#p2.value(1)
 p4 = Pin(4, Pin.OUT)
-#p5 = Pin(5, Pin.OUT)     #备用IO口
-#p12 = Pin(12, Pin.OUT)
-#p14 = Pin(14, Pin.OUT)
+p5 = Pin(5, Pin.OUT)     #备用IO口
+p12 = Pin(12, Pin.OUT)
+p14 = Pin(14, Pin.OUT)
+pwm5 = PWM(p5)          #舵机PWM输出
+pwm5.freq(50)
+pwm5.duty(0)           #90度角
+pwm12 = PWM(p12)        #直流电机正转PWM输出
+pwm12.freq(50)
+pwm12.duty(0)
+pwm14 = PWM(p14)        #直流电机反转PWM输出
+pwm14.freq(50)
+pwm14.duty(0)
 header_200 = """HTTP/1.1 200 OK\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: keep-alive\r\nConent-Length: %s\r\n\r\n"""
 header_401 = """HTTP/1.1 401 Unauthorized\r\n%s\r\nServer: K-httpd\r\nWWW-Authenticate: Basic realm="ESP8266"\r\nContent-Type: %s\r\nConnection: close\r\n\r\n"""
 header_404 = """HTTP/1.1 404 Not Found\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: close\r\nConent-Length: %s\r\n\r\n"""
@@ -40,7 +52,7 @@ def ip_status():   #判断是否连接了路由器
     if ip[1] != '0.0.0.0':
         try:
             return time.localtime(ntptime.time())
-        except OSError:
+        except:
             return '校对操作过快，请稍后再试！'
     else:
         return 'Unconnected'
@@ -49,7 +61,11 @@ def getlocaltime():
     month_data = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
     week_data = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     global t
-    t = list(time.localtime())
+    try:
+        t = list(time.localtime())
+    except:
+        print("Get local time error")
+        return
     for m in [1,2,3,4,5,6,7,8,9,10,11,12]:
         if t[1] == m:
             month = month_data[m - 1]
@@ -83,8 +99,9 @@ def readfilesize(filename):     #读文件长度
     f = open(filename, 'r')
     f.seek(0,0)
     f.seek(0,2)
-    return f.tell()
+    f_tell = f.tell()
     f.close()
+    return f_tell
 
 def readandsend_data(filename, add_str):     #读取文件数据并发送
     f = open(filename, 'r')
@@ -132,6 +149,10 @@ def main():     #主体
         getlocaltime()
         #print(local_date)     #Debug mode
         if data.find(b'GET / HTTP') != -1:     #主页
+            pwm12.duty(0)
+            pwm14.duty(0)
+            pwm5.freq(50)
+            pwm5.duty(64)
             if p4.value() == 1:
                 status = '开启'
             else:
@@ -185,7 +206,7 @@ def main():     #主体
                     filename_end = receives.find(b'"\r\n', filename_beg)
                     upload_filename = bytes.decode(receives[filename_beg:filename_end], 'utf-8')
                     filestatus = True
-                    print(upload_filename)     #Debug mode
+                    print("Upload file name:", upload_filename)     #Debug mode
                 if filestatus == True and receives.find(b'\r\n\r\n', filename_end) != -1 and datafound == False:     #寻找文件数据开头
                     upload_contect_beg = receives.find(b'\r\n\r\n', filename_end) + 4
                     datafound = True
@@ -240,12 +261,73 @@ def main():     #主体
             p4.value(0)
             cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") + len('已关灯！'))))
             readandsend_data("/html/status.html", '已关灯！')
-            print("Controller(turn off):", addr)     #Debug mode
+            #print("Controller(turn off):", addr)     #Debug mode
         elif data.find(b'GET /on ') != -1:     #IO口高电平
             p4.value(1)
             cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") + len('已开灯！'))))
             readandsend_data("/html/status.html", '已开灯！')
-            print("Controller(turn on):", addr)     #Debug mode
+            #print("Controller(turn on):", addr)     #Debug mode
+        elif data.find(b'GET /control ') != -1:     #小车控制页面
+            cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/car.html"))))
+            readandsend_data("/html/car.html", '')
+            pwm5.freq(50)
+            pwm5.duty(64)
+        #    while True:     #转向、油门ajax实时接收
+        #        ctl_data = cl.recv(1024)
+        #        print(ctl_data)      
+        #        if ctl_data.find(b'GET / ') != -1:
+        #            pwm12.duty(0)
+        #            pwm14.duty(0)
+        #            pwm5.duty(64)
+        #            break
+        elif data.find(b'GET /control&go-value=') != -1:    #小车前后控制
+            try:
+                cl.sendall("%s" % (header_200 % (local_date, content_type[2], "0")))
+            except:
+                print('Send car_data error')
+            go_value_beg = data.find(b'GET /control&go-value=') + 22
+            go_value_end = go_value_beg + 2
+            #go_value = int(ctl_data[go_value_beg:go_value_end]) - 16
+            ##########
+            #H桥控制直流电机
+            #if int(data[go_value_beg:go_value_end]) >= 20:      #正转
+            #    go_value = int((int(data[go_value_beg:go_value_end]) - 20) * 51.2)
+            #    pwm12.duty(go_value)
+            #    pwm14.duty(0)
+            #if int(data[go_value_beg:go_value_end]) < 20:       #反转
+            #    go_value = int((~int(data[go_value_beg:go_value_end]) + 21) * 51.2)
+            #    pwm12.duty(0)
+            #    pwm14.duty(go_value)
+            ##########
+            ##########
+            #电调控制三相无刷电机
+            go_value = int(data[go_value_beg:go_value_end]) + 51
+            pwm12.duty(go_value)
+            pwm14.duty(0)
+            ##########
+            print("go_value:",go_value)     #Debug mode
+        elif data.find(b'GET /control&turn-value=') != -1:  #小车左右控制
+            try:
+                cl.sendall("%s" % (header_200 % (local_date, content_type[2], "0")))
+            except:
+                print('Send car_data error')
+            turn_value_beg = data.find(b'GET /control&turn-value=') + 24
+            turn_value_end = turn_value_beg + 2
+            #turn_value=int(ctl_data[turn_value_beg:turn_value_end])
+            pwm5.freq(50)
+            if int(data[turn_value_beg:turn_value_end]) >= 16:      #右转
+                turn_value=int(data[turn_value_beg:turn_value_end]) - 16
+                pwm5.duty(64 - turn_value)
+            if int(data[turn_value_beg:turn_value_end]) < 16:      #左转
+                turn_value=int(~int(data[turn_value_beg:turn_value_end]) + 17)
+                pwm5.duty(64 + turn_value)
+            #print("turn_value:",(turn_value + 64))      #Debug mode
+        elif data.find(b'GET /js/jquery.min.js ') != -1:    #jquery.min.js
+            try:
+                cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/js/jquery.min.js"))))
+                readandsend_data("/html/js/jquery.min.js", "")
+            except:
+                print('Send jquery.js error')
         elif data.find(b'GET /synctime ') != -1:     #时间校对
             utc_time = ip_status()
             if utc_time != 'Unconnected' and utc_time != '校对操作过快，请稍后再试！':
@@ -276,12 +358,12 @@ def main():     #主体
                 cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(network_status)))))
                 readandsend_data("/html/status.html", network_status)
         elif data.find(b'GET /') != -1:     #404找不到
-            print(bytes.decode(data, 'utf-8'))
+            #print(bytes.decode(data, 'utf-8'))     #Debug mode
             len_beg = data.find(bytes("Host: ", 'utf-8')) + 6
             len_end = data.find(bytes("\r\n", 'utf-8'), len_beg)
             url_beg = data.find(bytes("GET ", 'utf-8')) + 4
             url_end = data.find(bytes(" HTTP/", 'utf-8'))
-            msg_404 = "%s%s" % (bytes.decode(data[len_beg:len_end], 'utf-8'), bytes.decode(data[url_beg:url_end], 'utf-8')) ,t[0], t[1], t[2], t[3], t[4], t[5]
+            msg_404 = "%s%s" % (bytes.decode(data[len_beg:len_end], 'utf-8'), bytes.decode(data[url_beg:url_end], 'utf-8')) ,t[0], t[1], t[2], (int(t[3]) + 8), t[4], t[5]
             cl.sendall("%s" % (header_404 % (local_date, content_type[0], readfilesize("/html/404.html") + len(msg_404))))
             readandsend_data("/html/404.html", msg_404)
         #print(data)     #Debug mode
