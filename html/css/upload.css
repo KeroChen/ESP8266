@@ -1,0 +1,150 @@
+body {
+    font-family: miranafont,"Hiragino Sans GB",STXihei,"Microsoft YaHei",SimSun,sans-serif;
+    margin: auto;
+    margin-top: 3px
+}
+        
+h1 {
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 28px
+}
+        
+.main {
+    width: 350px;
+    border-bottom: 2px dashed #3F51B5;
+    border-top: 2px dashed #FFEB3B;
+    border-left: 2px dashed #00BCD4;
+    border-right: 2px dashed #F44336;
+    margin: auto
+}
+
+.back button {
+    height: 60px;
+    margin-top: 20px;
+    border: 1px solid #4CAF50;
+    background: #FFF;
+    color: #6F6F6F;
+    font-family: microsoft yahei;
+    border-radius: 3px;
+    cursor: pointer;
+    -moz-transition: background-color 0.3s ease-in;
+    -webkit-transition: background-color 0.3s ease-in;
+    -o-transition: background-color 0.3s ease-in;
+    transition: background-color 0.3s ease-in
+}
+
+button:hover {
+    color: #444;
+    background: #eee;
+    border-color: #ccc
+}
+
+.submit_input {
+    margin-left: 10px;
+    height: 33px;
+    border: 1px solid #FF9800;
+    background: #FFF;
+    color: #6F6F6F;
+    font-family: microsoft yahei;
+    border-radius: 3px;
+    cursor: pointer;
+    -moz-transition: background-color 0.3s ease-in;
+    -webkit-transition: background-color 0.3s ease-in;
+    -o-transition: background-color 0.3s ease-in;
+    transition: background-color 0.3s ease-in
+}
+
+.submit_input:hover {
+    color: #444;
+    background: #eee;
+    border-color: #ccc
+}
+
+.upload_form {
+    margin-bottom: 0px
+}
+
+p {
+    margin-top: 10px;
+    color: red;
+    text-align: right
+}
+
+/*a  upload */
+.a-upload {
+    width: 150px;
+    padding: 4px 10px;
+    height: 23px;
+    line-height: 20px;
+    position: relative;
+    cursor: pointer;
+    color: #888;
+    background: #FFF;
+    border: 1px solid #FF9800;
+    border-radius: 4px;
+    display: inline-block;
+    *display: inline;
+    *zoom: 1;
+    text-decoration: none;
+    -moz-transition: background-color 0.3s ease-in;
+    -webkit-transition: background-color 0.3s ease-in;
+    -o-transition: background-color 0.3s ease-in;
+    transition: background-color 0.3s ease-in
+}
+
+.a-upload input {
+    position: absolute;
+    right: 0;
+    top: 0;
+    opacity: 0;
+    filter: alpha(opacity=0);
+    cursor: pointer
+}
+
+.a-upload:hover {
+    color: #444;
+    background: #eee;
+    border-color: #ccc
+}
+
+.foo-logo {
+    width: 30px;
+    height: 30px;
+    opacity: .3;
+    margin: 0 auto;
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-image: url(/img/f-logo.png);
+    animation: poi-deg 12s infinite linear;
+    -webkit-animation: poi-deg 12s infinite linear
+}
+        
+.foo-text {
+    text-align: center;
+    font-size: 12px;
+    color: #B9B9B9;
+    text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.1)
+}
+        
+/*360度旋转*/
+@keyframes poi-deg {
+    0% {
+        transform: rotate(0deg)
+    }
+
+    100% {
+        transform: rotate(360deg)
+    }
+}
+
+@-webkit-keyframes poi-deg {
+    0% {
+        transform: rotate(0deg)
+    }
+
+    100% {
+        transform: rotate(360deg)
+    }
+}

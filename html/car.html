@@ -3,124 +3,86 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <script type="text/javascript" src="js/jquery.min.js"></script>
+        <link rel="stylesheet" id="siren-css" href="/css/car.css" type="text/css" media="all">
         <title>ESP8266 灯光控制</title>
-        <style>
-        body {
-            font-family: miranafont,"Hiragino Sans GB",STXihei,"Microsoft YaHei",SimSun,sans-serif;
-            margin: auto;
-            margin-top: 3px;
-        }
-
-        .main {
-            width: 350px;
-            border-bottom: 2px dashed #3F51B5;
-            border-top: 2px dashed #FFEB3B;
-            border-left: 2px dashed #00BCD4;
-            border-right: 2px dashed #F44336;
-            margin: auto;
-        }
-
-        h1 {
-            margin-bottom: 15px;
-            text-align: center;
-            font-size: 28px;
-        }
-
-        p {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        
-        input {
-            width: 200px;
-            height: 30px;
-        }
-
-        .func_button button {
-            margin-top: 10px;
-            margin-bottom: 15px;
-            height: 60px;
-            border: 1px solid #4CAF50;
-            background: #FFFFFF;
-            color: #6F6F6F;
-            font-family: microsoft yahei;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        .func_button {
-            text-align: center;
-        }
-
-        button:hover {
-            color: #444;
-            background: #eee;
-            border-color: #ccc;
-            transition: background-color 0.3s ease-in-out
-        }
-
-        .foo-logo {
-            width: 30px;
-            height: 30px;
-            opacity: .3;
-            margin: 0 auto;
-            background-size: cover;
-            background-position: center center;
-            background-repeat: no-repeat;
-            background-image: url(https://www.flasky.cn/wp-content/themes/Siren/images/f-logo.png);
-            animation: poi-deg 12s infinite linear;
-            -webkit-animation: poi-deg 12s infinite linear
-        }
-        
-        .foo-text {
-            text-align: center;
-            font-size: 12px;
-            color: #B9B9B9;
-            text-shadow: 0px 0px 1px rgba(0, 0, 0, 0.1)
-        }
-        
-        /*360度旋转*/
-        @keyframes poi-deg {
-            0% {
-                transform: rotate(0deg)
-            }
-
-            100% {
-                transform: rotate(360deg)
-            }
-        }
-
-        @-webkit-keyframes poi-deg {
-            0% {
-                transform: rotate(0deg)
-            }
-
-            100% {
-                transform: rotate(360deg)
-            }
-        }
-        </style>
         <script>
-            function change_turn(){
-                var range=document.getElementById("range_turn");
-                var show=document.getElementById("show_turn");
-                show.innerHTML=range.value-16;
-                $.ajax({
-                type: 'GET',
-                url:"/control&turn-value="+range.value,
-                async:false
-                });
+            var close_status = "Close";
+            function WebSocketOpen()
+            {
+                // 打开 websocket
+                window.ws = new WebSocket("ws://192.168.1.129/control_open");
+                ws.onopen = function()
+                {
+                    console.log("WebSocket已连接");
+                    change_status();
+                    var open_ctl = document.getElementById("open_ctl");
+                    var range_turn = document.getElementById("range_turn");
+                    var range_go = document.getElementById("range_go");
+                    open_ctl.setAttribute("onclick","WebSocketClose()");
+                    open_ctl.innerHTML = "关闭控制";
+                    range_turn.removeAttribute("disabled");
+                    range_go.removeAttribute("disabled");
+                    close_status = "Open";
+                }
             }
+            
+            function WebSocketSend(types, range_v)
+            {
+                if(types == "go"){
+                    ws.send("control&go-value=" + range_v);
+                }
+                else{
+                    ws.send("control&turn-value=" + range_v);
+                }
+                console.log("数据已发送");
+            }
+            
+            function change_turn(){
+                var range = document.getElementById("range_turn");
+                var show = document.getElementById("show_turn");
+                show.innerHTML = range.value - 26;
+                WebSocketSend("turn", range.value);
+            }
+            
             function change_go(){
-                var range=document.getElementById("range_go");
-                var show=document.getElementById("show_go");
-                show.innerHTML=range.value;
-            $.ajax({
-                type: 'GET',
-                url:"/control&go-value="+range.value,
-                async:false
-                });
+                var range = document.getElementById("range_go");
+                var show = document.getElementById("show_go");
+                show.innerHTML = range.value;
+                WebSocketSend("go", range.value);
+            }
+            
+            function change_status(){
+                var ctl_status = document.getElementById("ctl_status");
+                if(ctl_status.innerHTML == "开启"){
+                    ctl_status.innerHTML = "关闭";
+                }
+                else{
+                    ctl_status.innerHTML = "开启";
+                }
+            }
+            
+            function WebSocketClose(){
+                if(close_status == "Close"){
+                    console.log("连接已关闭...");
+                }
+                else{
+                    ws.send("Close connection");
+                    ws.close();
+                    console.log("连接已关闭...");
+                    change_status();
+                    var open_ctl = document.getElementById("open_ctl");
+                    var range_turn = document.getElementById("range_turn");
+                    var range_go = document.getElementById("range_go");
+                    open_ctl.setAttribute("onclick","WebSocketOpen()");
+                    open_ctl.innerHTML = "打开控制";
+                    range_turn.setAttribute("disabled","disabled");
+                    range_go.setAttribute("disabled","disabled");
+                    close_status = "Close";
+                }
+            }
+            
+            window.onbeforeunload = function() {
+                WebSocketClose();
             }
         </script>
     </head>
@@ -129,12 +91,14 @@
             <h1>ESP8266 小车控制</h1>
             <div class="func_button">
                 <p>转向：</p>
-                <input id="range_turn" type="range" min="0" max="32" value="16" oninput="change_turn()"><span id="show_turn">0</span>
+                <input id="range_turn" type="range" min="0" max="52" value="26" oninput="change_turn()" disabled="disabled"><span id="show_turn">0</span>
                 <div></div>
                 <p>油门：</p>
-                <input id="range_go" type="range" min="0" max="51" value="0" oninput="change_go()"><span id="show_go">0</span>
+                <input id="range_go" type="range" min="0" max="51" value="0" oninput="change_go()" disabled="disabled"><span id="show_go">0</span>
                 <div style="height: 30px;"></div>
-                <button type="button" onclick="javascript:location.href='/'">返回主页</button>
+                <p style="text-align: center;margin-bottom: 10px">当前控制状态：<span id="ctl_status" style="color: red;">关闭</span></p>
+                <button id="open_ctl" type="button" onclick="WebSocketOpen()">打开控制</button>
+                <button type="button" onclick="javascript:location.href='/';WebSocketClose();">返回主页</button>
             </div>
             <p class="foo-logo"></p>
             <p class="foo-text">© 2018 KeroChen | Powered by MicroPython</p>
