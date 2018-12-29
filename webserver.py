@@ -16,10 +16,10 @@ machine.freq(160000000) #超频至160MHz（实验性）
 ####################
 #WIFI功能设置
 ap_if = network.WLAN(network.AP_IF)
-ap_if.config(essid="Light", authmode=network.AUTH_WPA_WPA2_PSK, password="lightpassword")
+ap_if.config(essid = "Light", authmode = network.AUTH_WPA_WPA2_PSK, password = "lightpassword")
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
-wlan.connect('SSID','password')
+wlan.connect('SSID', 'password')
 ####################
 
 ####################
@@ -48,9 +48,9 @@ pwm14.duty(0)
 ####################
 #http协议头
 header_101 = """HTTP/1.1 101 Web Socket Protocol Handshake\r\nUpgrade: websocket\r\nServer: K-httpd\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n"""
-header_200 = """HTTP/1.1 200 OK\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: keep-alive\r\nConent-Length: %s\r\n\r\n"""
+header_200 = """HTTP/1.1 200 OK\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: keep-alive\r\nContent-Length: %s\r\n\r\n"""
 header_401 = """HTTP/1.1 401 Unauthorized\r\n%s\r\nServer: K-httpd\r\nWWW-Authenticate: Basic realm="ESP8266"\r\nContent-Type: %s\r\nConnection: close\r\n\r\n"""
-header_404 = """HTTP/1.1 404 Not Found\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: close\r\nConent-Length: %s\r\n\r\n"""
+header_404 = """HTTP/1.1 404 Not Found\r\n%s\r\nServer: K-httpd\r\nContent-Type: %s\r\nConnection: close\r\nContent-Length: %s\r\n\r\n"""
 content_type = ["text/html; charset=utf-8", "text/css; charset=utf-8", "application/x-javascript; charset=utf-8", "image/x-icon", "image/jpeg", "image/png"]
 ntptime.host = 'cn.ntp.org.cn'
 magic_key = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -68,15 +68,16 @@ s.listen(5)
 ####################
 
 def ip_status():   #判断是否连接了路由器
-    ip = wlan.ifconfig()
-    if ip[1] != '0.0.0.0':
+    #ip = wlan.ifconfig()
+    #if ip[1] != '0.0.0.0':
+    if wlan.isconnected():
         try:
             return time.localtime(ntptime.time())
         except:
             return '校对操作过快，请稍后再试！'
     else:
         return 'Unconnected'
-
+    
 def getlocaltime():
     month_data = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
     week_data = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -192,7 +193,7 @@ def parse_recv_data(msg):     #WebSocket报文解析
         res = en_bytes.decode()
     return res
 
-def websocket_ctl(data_ws):
+def websocket_ctl(data_ws):     #WebSocket控制
     if data_ws.find(b'Connection: Upgrade') != -1:
         client_key_beg = data_ws.find(b'Sec-WebSocket-Key:') + 19
         client_key_end = data_ws.find(b'\r\n', client_key_beg)
@@ -230,7 +231,7 @@ def websocket_ctl(data_ws):
             elif msg == " ":     #非正常关闭连接
                 print('[Warning]: Abnormal closure WebSocket!!!')
                 break
-
+    
 #def bingimages():     #bing壁纸
 #    req =  urequests.get('https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1')
 #    json_str = str(req.json()['images'])
@@ -248,14 +249,12 @@ def main():     #主体
     else:
         print('Network error')
     print('Listening on', addr)
-    pwm5.duty(77)
-    pwm12.duty(51)
     while True:
         try:
             cl, addr = s.accept()
         except OSError:
             print("OSError: accept")
-        #print('client connected from', addr)     #Debug mode
+        print('Client connected from', addr)     #Debug mode
         data = cl.recv(1024)
         #print(data)     #Debug mode
         getlocaltime()
@@ -265,13 +264,13 @@ def main():     #主体
                 status = '开启'
             else:
                 status = '关闭'
-            cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/index.html") + len(status))))
+            cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/index.html") - 2 + (len(status) * 3))))
             readandsend_data("/html/index.html", 'r', status)
             print('[Info]: GET /index.html')
         elif data.find(b'GET /upload ') != -1:     #文件上传
-            if data.find(b'Authorization: Basic ') == -1:
+            if data.find(b'Authorization: Basic ') == -1:       #首次访问页面，发送401页面
                 cl.sendall("%s" % (header_401 % (local_date, content_type[0])))
-            elif data.find(b'Authorization: Basic ') != -1:
+            elif data.find(b'Authorization: Basic ') != -1:     #接收验证信息
                 base64_auth_beg = data.find(b'Authorization: Basic ') + 21
                 base64_auth_end = data.find(b'\r\n', base64_auth_beg)
                 base64_auth = data[base64_auth_beg:base64_auth_end]
@@ -279,8 +278,8 @@ def main():     #主体
                 auth = ubinascii.a2b_base64(base64_auth).decode('utf-8')
                 #print(auth)     #Debug mode
                 #print('ban=', ban)     #Debug mode
-                if auth == 'admin:123456':
-                    cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html"))))
+                if auth == 'admin:123456':          #身份验证通过
+                    cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html") - 2)))
                     readandsend_data("/html/upload.html")
                 elif ban != 5:
                     ban = ban + 1
@@ -356,7 +355,7 @@ def main():     #主体
                 upload_status = "文件上传失败！请检查文件路径。"
             else:
                 upload_status = "文件上传成功！"
-            cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html") + len(upload_status))))
+            cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/upload.html") - 2 + (len(upload_status) * 3))))
             readandsend_data("/html/upload.html", 'r', upload_status)
             print('[Info]: Upload success!!!')
         elif data.find(b'GET /favicon.ico ') != -1:     #网页图标
@@ -365,13 +364,13 @@ def main():     #主体
             print('[Info]: GET /favicon.ico')
         elif data.find(b'GET /off ') != -1:     #IO口低电平
             p4.value(0)
-            cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") + len('已关灯！'))))
+            cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") - 2 + 11)))
             readandsend_data("/html/status.html", 'r', '已关灯！')
             print('[Info]: GET /status.html')
             #print("Controller(turn off):", addr)     #Debug mode
         elif data.find(b'GET /on ') != -1:     #IO口高电平
             p4.value(1)
-            cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") + len('已开灯！'))))
+            cl.sendall("%s" % (header_200 % (local_date, content_type[0], readfilesize("/html/status.html") - 2 + 11)))
             readandsend_data("/html/status.html", 'r', '已开灯！')
             print('[Info]: GET /status.html')
             #print("Controller(turn on):", addr)     #Debug mode
@@ -383,6 +382,7 @@ def main():     #主体
             print('[Info]: GET /car.html')
         elif data.find(b'GET /control_open ') != -1:     #请求websocket连接
             websocket_ctl(data)
+
         #elif data.find(b'GET /js/jquery.min.js ') != -1:    #jquery.min.js
         #    try:
         #        cl.sendall("%s" % (header_200 % (local_date, content_type[2], (str(readfilesize("/html/js/jquery.min.js.gz")) + "\r\nContent-Encoding: gzip\r\nCache-control: max-age=86400"))))
@@ -390,6 +390,7 @@ def main():     #主体
         #        print('GET /js/jquery.min.js')
         #    except:
         #        print('Send jquery.js error')
+
         elif data.find(b'GET /css/car.css ') != -1:    #car.css
             try:
                 cl.sendall("%s" % (header_200 % (local_date, content_type[1], (str(readfilesize("/html/css/car.css.gz")) + "\r\nContent-Encoding: gzip\r\nCache-control: max-age=86400"))))
@@ -444,15 +445,15 @@ def main():     #主体
                 if utc_time[6] < 10:
                     utc_time[6] = "%s%s" % ("0", utc_time[6])
                 addtime = """时间已校准！<br>当前北京时间是：<spen style="color:red;font-size: 15px;">%s年%s月%s日 %s:%s:%s</spen>""" % (str(utc_time[0]), utc_time[1], utc_time[2], utc_time[4], utc_time[5], utc_time[6])
-                cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(addtime)))))
+                cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") -2 + len(addtime) + 44))))
                 readandsend_data("/html/status.html", 'r', addtime)
             elif utc_time == '校对操作过快，请稍后再试！':
                 errno110_msg = utc_time + "</b>"
-                cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(errno110_msg)))))
+                cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") -2 + len(errno110_msg) + 26))))
                 readandsend_data("/html/status.html", 'r', errno110_msg)
             else:
                 network_status = '时间校准失败，网络未连接！'
-                cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") + len(network_status)))))
+                cl.sendall("%s" % (header_200 % (local_date, content_type[0], (readfilesize("/html/status.html") -2 + (len(network_status) * 3)))))
                 readandsend_data("/html/status.html", 'r', network_status)
             print('[Info]: GET /synctime')
         elif data.find(b'GET /') != -1:     #404找不到
